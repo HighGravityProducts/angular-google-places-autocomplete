@@ -15,7 +15,9 @@ angular.module('google.places', [])
    * Note: requires the Google Places API to already be loaded on the page.
    */
   .factory('googlePlacesApi', ['$window', function ($window) {
-        if (!$window.google) throw 'Global `google` var missing. Did you forget to include the places API script?';
+        if (!$window.google) {
+            console.info('Global `google` var missing. Did you forget to include the places API script?');
+        }
 
     return $window.google;
   }])
@@ -48,8 +50,8 @@ angular.module('google.places', [])
                             down: 40
                         },
                         hotkeys = [keymap.tab, keymap.enter, keymap.esc, keymap.up, keymap.down],
-                        autocompleteService = new google.maps.places.AutocompleteService(),
-                        placesService = new google.maps.places.PlacesService(element[0]);
+                        _autocompleteService = null,
+                        _placesService = null;
 
                     (function init() {
                         $scope.query = '';
@@ -62,14 +64,22 @@ angular.module('google.places', [])
                         initNgModelController();
                     }());
 
+                    function autocompleteService() {
+                        return _autocompleteService || new google.maps.places.AutocompleteService();
+                    }
+
+                    function placesService() {
+                        return _placesService || new google.maps.places.PlacesService(element[0]);
+                    }
+
                     function initEvents() {
                         element.bind('keydown', onKeydown);
                         element.bind('blur', onBlur);
                         element.bind('submit', onBlur);
-                        $scope.$on("g-places-autocomplete:select", function(e, prediction) {
-                          //console.log(prediction);
-                          $scope.onPlaceUpdated({place: prediction});
-                        });
+                       $scope.$on("g-places-autocomplete:select", function(e, prediction) {
+                         //console.log(prediction);
+                         $scope.onPlaceUpdated({place: prediction});
+                       });
                         $scope.$watch('selected', select);
                     }
 
@@ -167,7 +177,7 @@ angular.module('google.places', [])
                                 });
                             });
                         } else {
-                            placesService.getDetails({ placeId: prediction.place_id }, function (place, status) {
+                            placesService().getDetails({ placeId: prediction.place_id }, function (place, status) {
                                 if (status == google.maps.places.PlacesServiceStatus.OK) {
                                     $scope.$apply(function () {
                                         $scope.model = place;
@@ -191,7 +201,7 @@ angular.module('google.places', [])
                         $scope.query = viewValue;
 
                         request = angular.extend({ input: viewValue }, $scope.options);
-                        autocompleteService.getPlacePredictions(request, function (predictions, status) {
+                        autocompleteService().getPlacePredictions(request, function (predictions, status) {
                             $scope.$apply(function () {
                                 var customPlacePredictions;
 
